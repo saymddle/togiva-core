@@ -1,0 +1,16 @@
+{
+  "name": "@togiva/shared-types",
+  "version": "0.1.0",
+  "description": "Canonical TOGIVA domain types and validation schemas",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": { "zod": "^4.1.0" }
+}

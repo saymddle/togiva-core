@@ -1,0 +1,21 @@
+{
+  "name": "@togiva/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "worker": "tsx src/worker.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@togiva/api-contracts": "workspace:*",
+    "@togiva/database": "workspace:*",
+    "@togiva/shared-types": "workspace:*",
+    "fastify": "^5.2.0",
+    "jose": "^5.9.6",
+    "zod": "^4.1.0"
+  }
+}
