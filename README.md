@@ -49,3 +49,10 @@ Not configured yet. Intended shape: one API service and one worker service from 
 ## Rules
 
 No client branding, menus, reward names or business policies in this repository. Those are organization configuration or client-repository code.
+
+## Project portal
+
+`apps/portal` builds a static site from `docs/`, recent commits and the
+OpenAPI document (`node apps/portal/build.mjs` → `apps/portal/dist`). Vercel
+rebuilds it on every push, so each branch has a viewable page with the
+current implementation status, design docs and API reference.
