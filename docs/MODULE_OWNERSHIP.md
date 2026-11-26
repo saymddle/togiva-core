@@ -16,7 +16,7 @@ Each module has one owner (a workstream / thread). Only the owner edits its file
 | Staff management | `apps/api/src/modules/staff/**` (new) | Franchise workstream (API) | Not started; schema + escalation guard done |
 | Connection codes | `apps/api/src/modules/connection-codes/**` | Core architecture | Done end to end |
 | Background jobs | `apps/api/src/modules/jobs/**`, `apps/api/src/worker.ts` | Core architecture | Done |
-| Loyalty engine and rewards | `apps/api/src/modules/loyalty/**` (new) | Loyalty workstream | Not started; schema, config type and wallet/activity/rewards/redemption contracts fixed |
+| Loyalty engine and rewards | `apps/api/src/modules/loyalty/**` | Loyalty workstream | Part 1 done (earning, reversals, wallet, rewards, redemption, adjustments, reconciliation); admin API and expiry next |
 | POS framework + adapters | `apps/api/src/modules/pos/**`, later `packages/pos-*` | POS integration workstream | Not started; schema + `PosAdapter` + `NormalizedTransaction` fixed |
 | Campaigns and offers | `apps/api/src/modules/campaigns/**` (new) | Corporate workstream (API) | Not started; schema done |
 | Notifications | `apps/api/src/modules/notifications/**` (new) | Customer workstream (API) | Not started; schema done |

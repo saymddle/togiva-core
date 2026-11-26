@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 2026-11-26 (Phase 0, Phase 1, and core support for Phase 2). Update this file in the same PR that changes a module's state.
+Last updated: 2026-11-26 (Phase 0, Phase 1, core support for Phase 2, Phase 4 loyalty engine part 1). Update this file in the same PR that changes a module's state.
 
 Legend: ✅ implemented and tested · 🟨 schema/contract fixed, implementation pending · ⬜ not started
 
@@ -35,12 +35,29 @@ See `REPOSITORY_ASSESSMENT.md`. Both project repositories were empty. The Mr. Co
 
 Built in `saymddle/mr-cow-applications`: customer PWA, franchise portal and corporate console shells, brand configuration from the Mr. Cow website, shared UI, a typed API client generated from this repository's OpenAPI document, Supabase Auth sign-in and role-based navigation from `/v1/me`. See that repository's `docs/IMPLEMENTATION_STATUS.md`.
 
+## Phase 4: loyalty engine (part 1) ✅
+
+See `LOYALTY_ENGINE.md`.
+
+| Area | State | Notes |
+| --- | --- | --- |
+| Earning evaluator: base rate, multipliers, fixed/threshold/product/visit bonuses, tier multiplier, location/region/day/tier conditions | ✅ | Pure function, `apps/api/src/modules/loyalty/engine.ts` |
+| Points from POS-confirmed purchases (`loyalty.process_association`) | ✅ | Idempotent per sale; version in effect at purchase time |
+| Pending window (refund window) before points are spendable | ✅ | `pendingPeriodSeconds` per version |
+| Tier progression (promotion) | ✅ | Downgrade policy not configurable yet (see open questions) |
+| Refund and void reversals (`loyalty.process_transaction_change`) | ✅ | Trigger on `pos_transactions`; compensating entries only |
+| Wallet, activity, rewards catalog with server-side eligibility | ✅ | |
+| Redemption tokens: issue, re-show, cancel, staff verify/complete, expiry sweep, inventory | ✅ | 80-bit token, only SHA-256 stored |
+| Manual adjustments with two-person approval | ✅ | |
+| Ledger reconciliation (`loyalty.reconcile`, hourly) | ✅ | |
+| Points expiry job | ⬜ | `points_expire_at` is recorded; the expiring job needs a business rule (FIFO etc.) |
+| Loyalty program, tier, rule and reward administration API (corporate console) | ⬜ | Next; until then configure with SQL or the dev seed |
+| Reversing a completed redemption (e.g. refunded order) | ⬜ | |
+
 ## Later phases (core side)
 
 | Area | State | Owner |
 | --- | --- | --- |
-| Loyalty engine: earning, bonuses, tiers, ledger posting, projections, reversals, expiry | 🟨 schema + config type + wallet/activity/rewards/redemption contracts | Loyalty |
-| Rewards and redemption tokens | 🟨 | Loyalty |
 | Staff management API (invite, assign, deactivate) | 🟨 schema + guards | Franchise |
 | Organization/location/region/franchise admin API | 🟨 schema | Corporate |
 | Campaigns and offers | 🟨 schema | Corporate |
@@ -55,7 +72,7 @@ Built in `saymddle/mr-cow-applications`: customer PWA, franchise portal and corp
 
 ## Tests (2026-11-26)
 
-`pnpm test` with `TEST_DATABASE_URL` pointing at Postgres 16: **78 passed, 0 failed**.
+`pnpm test` with `TEST_DATABASE_URL` pointing at Postgres 16: **101 passed, 0 failed**.
 
 | Suite | Tests |
 | --- | --- |
@@ -65,6 +82,8 @@ Built in `saymddle/mr-cow-applications`: customer PWA, franchise portal and corp
 | `apps/api/test/connection-codes.test.ts` | 29 |
 | `apps/api/test/identity-and-locations.test.ts` | 13 |
 | `apps/api/test/client-access.test.ts` | 6 |
+| `apps/api/test/loyalty-engine.test.ts` | 11 |
+| `apps/api/test/loyalty.test.ts` | 12 |
 
 Also verified manually: migrations apply on an empty database and are idempotent on rerun; dev fixtures load; the API process starts, `/v1/health` reports the database, and a real token issued a code (`0871`, leading zero preserved) through HTTP.
 
@@ -75,6 +94,9 @@ Also verified manually: migrations apply on an empty database and are idempotent
 - A code is consumed when the cashier associates an order; points come only after POS confirmation.
 - Associations not confirmed by the POS within 24 hours go to human review.
 - Customers may browse any active, loyalty-participating location (store info is public).
+- Loyalty: refunds reduce points proportionally to the refunded share of the sale; a refund after the points were spent leaves a negative balance that later earning repays (the ledger stays true; the wallet shows 0).
+- Loyalty: tiers are promoted automatically and never lowered automatically until a downgrade policy is decided.
+- Loyalty: a sale confirmed while the organization has no active program, or no version in effect, earns nothing and is logged as an integration error.
 - Mr. Cow will be created as an organization record through onboarding; nothing Mr. Cow-specific is in this repository.
 
 ## External dependencies still needed

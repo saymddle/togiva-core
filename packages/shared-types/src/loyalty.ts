@@ -111,3 +111,80 @@ export const IssuedRedemption = z.object({
   pointsCost: z.number().int(),
   expiresAt: z.iso.datetime({ offset: true }),
 });
+export type IssuedRedemption = z.infer<typeof IssuedRedemption>;
+export type IssueRedemptionRequest = z.infer<typeof IssueRedemptionRequest>;
+
+// ---- Phase 4: engine inputs and staff/customer loyalty DTOs ----------------
+
+/**
+ * loyalty_earning_rules.conditions. Every condition present must hold for the
+ * rule to apply. All values are organization configuration.
+ */
+export const EarningRuleConditions = z.object({
+  locationIds: z.array(z.uuid()).optional(),
+  regionIds: z.array(z.uuid()).optional(),
+  tierRanks: z.array(z.number().int().positive()).optional(),
+  productRefs: z.array(z.string()).optional(),
+  categories: z.array(z.string()).optional(),
+  minEligibleMinor: z.number().int().nonnegative().optional(),
+  /** 0 = Sunday … 6 = Saturday, evaluated in the location's time zone. */
+  daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(),
+  /** visit_bonus: award on every Nth qualifying visit within the qualification period. */
+  everyNthVisit: z.number().int().positive().optional(),
+});
+export type EarningRuleConditions = z.infer<typeof EarningRuleConditions>;
+
+export const RedemptionStatus = z.enum(["issued", "completed", "expired", "cancelled", "reversed"]);
+
+/** What a cashier sees when a customer presents a redemption token. Minimal identification only. */
+export const RedemptionVerification = z.object({
+  id: z.uuid(),
+  status: RedemptionStatus,
+  reward: z.object({ id: z.uuid(), name: z.string(), posDiscountRef: z.string().nullable() }),
+  customer: z.object({ firstName: z.string().nullable(), membershipLast4: z.string() }),
+  locationId: z.uuid(),
+  expiresAt: z.iso.datetime({ offset: true }),
+  completedAt: z.iso.datetime({ offset: true }).nullable(),
+});
+export type RedemptionVerification = z.infer<typeof RedemptionVerification>;
+
+export const RedemptionTokenRequest = z.object({
+  token: z.string().trim().min(8).max(64),
+  terminalId: z.string().max(64).optional(),
+});
+
+export const CustomerRedemption = IssuedRedemption.omit({ token: true }).extend({
+  rewardName: z.string(),
+  completedAt: z.iso.datetime({ offset: true }).nullable(),
+});
+export type CustomerRedemption = z.infer<typeof CustomerRedemption>;
+
+export const AdjustmentRequestInput = z.object({
+  organizationCustomerId: z.uuid(),
+  locationId: z.uuid().optional(),
+  points: z.number().int().refine((n) => n !== 0, "points must not be zero"),
+  qualifyingAmountMinor: z.number().int().default(0),
+  reason: z.string().trim().min(5).max(500),
+  supportCaseId: z.uuid().optional(),
+});
+
+export const AdjustmentDecisionInput = z.object({
+  decision: z.enum(["approve", "reject"]),
+  note: z.string().max(500).optional(),
+});
+
+export const AdjustmentRequestSummary = z.object({
+  id: z.uuid(),
+  organizationCustomerId: z.uuid(),
+  locationId: z.uuid().nullable(),
+  points: z.number().int(),
+  qualifyingAmountMinor: z.number().int(),
+  reason: z.string(),
+  status: z.enum(["pending", "approved", "rejected", "applied"]),
+  requestedBy: z.uuid(),
+  reviewedBy: z.uuid().nullable(),
+  reviewedAt: z.iso.datetime({ offset: true }).nullable(),
+  ledgerEntryId: z.string().nullable(),
+  createdAt: z.iso.datetime({ offset: true }),
+});
+export type AdjustmentRequestSummary = z.infer<typeof AdjustmentRequestSummary>;

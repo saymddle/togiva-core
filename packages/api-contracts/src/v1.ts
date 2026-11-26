@@ -1,6 +1,9 @@
 import { z } from "zod";
 import {
   ActivityItem,
+  AdjustmentDecisionInput,
+  AdjustmentRequestInput,
+  AdjustmentRequestSummary,
   AssociateOrderRequest,
   ConnectionCodeReservation,
   ConnectionCodeState,
@@ -15,6 +18,10 @@ import {
   OrganizationSummary,
   Page,
   PageQuery,
+  CustomerRedemption,
+  RedemptionStatus,
+  RedemptionTokenRequest,
+  RedemptionVerification,
   RewardSummary,
   TransactionAssociation,
   Wallet,
@@ -25,6 +32,9 @@ const OrgParams = z.object({ organizationId: z.uuid() });
 const SlugParams = z.object({ slug: z.string().regex(/^[a-z0-9][a-z0-9-]{1,62}$/) });
 const LocationParams = OrgParams.extend({ locationId: z.uuid() });
 const ReservationParams = LocationParams.extend({ reservationId: z.uuid() });
+const RedemptionParams = OrgParams.extend({ redemptionId: z.uuid() });
+const AdjustmentParams = OrgParams.extend({ adjustmentId: z.uuid() });
+const AdjustmentStatus = z.enum(["pending", "approved", "rejected", "applied"]);
 
 export const EnrollmentRequest = z.object({
   firstName: z.string().trim().min(1).max(80),
@@ -117,24 +127,88 @@ export const v1 = {
     status: "implemented", owner: "connection-codes",
   }),
 
-  // ---- Loyalty (contracts fixed, implementation Phase 4) ---------------------
+  // ---- Loyalty: customer -----------------------------------------------------
   getWallet: defineRoute({
     id: "getWallet", method: "GET", path: "/v1/me/organizations/{organizationId}/wallet", summary: "Points, tier progress and next reward",
-    auth: "customer", params: OrgParams, response: Wallet, successStatus: 200, errors: ["unauthenticated", "membership_required"], status: "planned", owner: "loyalty",
+    description: "Balances are computed from the append-only ledger. pendingPoints are earned but inside the program's refund window. dataStatus is pending_updates while a submitted purchase awaits POS confirmation or the loyalty engine.",
+    auth: "customer", params: OrgParams, response: Wallet, successStatus: 200, errors: ["unauthenticated", "membership_required", "loyalty_program_unavailable"], status: "implemented", owner: "loyalty",
   }),
   listActivity: defineRoute({
     id: "listActivity", method: "GET", path: "/v1/me/organizations/{organizationId}/activity", summary: "Purchases, points and redemptions, newest first",
-    auth: "customer", params: OrgParams, query: PageQuery, response: Page(ActivityItem), successStatus: 200, errors: ["unauthenticated", "membership_required"], status: "planned", owner: "loyalty",
+    auth: "customer", params: OrgParams, query: PageQuery, response: Page(ActivityItem), successStatus: 200,
+    errors: ["unauthenticated", "membership_required", "loyalty_program_unavailable"], status: "implemented", owner: "loyalty",
   }),
   listRewards: defineRoute({
     id: "listRewards", method: "GET", path: "/v1/me/organizations/{organizationId}/rewards", summary: "Reward catalog with per-customer eligibility",
+    description: "Active, non-surprise rewards ordered by points cost. Pass locationId to evaluate store-specific availability and stock.",
     auth: "customer", params: OrgParams, query: PageQuery.extend({ locationId: z.uuid().optional() }), response: Page(RewardSummary), successStatus: 200,
-    errors: ["unauthenticated", "membership_required"], status: "planned", owner: "loyalty",
+    errors: ["unauthenticated", "membership_required", "loyalty_program_unavailable"], status: "implemented", owner: "loyalty",
   }),
   issueRedemption: defineRoute({
     id: "issueRedemption", method: "POST", path: "/v1/me/organizations/{organizationId}/redemptions", summary: "Reserve points for a reward and get a redemption token",
+    description: "Debits the points immediately and returns a high-entropy token (never the four-digit connection code) for the cashier. Unused tokens expire after the reward's TTL and the points are returned. Idempotent per idempotencyKey: a retry returns the same redemption with 200.",
     auth: "customer", params: OrgParams, body: IssueRedemptionRequest, response: IssuedRedemption, successStatus: 201,
-    errors: ["unauthenticated", "membership_required", "conflict", "idempotency_conflict"], status: "planned", owner: "loyalty",
+    errors: ["unauthenticated", "membership_required", "loyalty_program_unavailable", "not_found", "location_not_participating", "insufficient_points", "reward_unavailable", "conflict", "idempotency_conflict"],
+    status: "implemented", owner: "loyalty",
+  }),
+  listMyRedemptions: defineRoute({
+    id: "listMyRedemptions", method: "GET", path: "/v1/me/organizations/{organizationId}/redemptions", summary: "The caller's redemptions, newest first",
+    auth: "customer", params: OrgParams, query: PageQuery.extend({ status: RedemptionStatus.optional() }), response: Page(CustomerRedemption), successStatus: 200,
+    errors: ["unauthenticated", "membership_required", "loyalty_program_unavailable"], status: "implemented", owner: "loyalty",
+  }),
+  getMyRedemption: defineRoute({
+    id: "getMyRedemption", method: "GET", path: "/v1/me/organizations/{organizationId}/redemptions/{redemptionId}", summary: "Show an unused redemption token again",
+    auth: "customer", params: RedemptionParams, response: IssuedRedemption, successStatus: 200,
+    errors: ["unauthenticated", "membership_required", "not_found", "redemption_invalid", "redemption_expired"], status: "implemented", owner: "loyalty",
+  }),
+  cancelMyRedemption: defineRoute({
+    id: "cancelMyRedemption", method: "DELETE", path: "/v1/me/organizations/{organizationId}/redemptions/{redemptionId}", summary: "Cancel an unused redemption and get the points back",
+    auth: "customer", params: RedemptionParams, successStatus: 204,
+    errors: ["unauthenticated", "membership_required", "not_found", "redemption_already_completed"], status: "implemented", owner: "loyalty",
+  }),
+
+  // ---- Loyalty: store staff ---------------------------------------------------
+  verifyRedemption: defineRoute({
+    id: "verifyRedemption", method: "POST", path: "/v1/organizations/{organizationId}/locations/{locationId}/redemptions/verify",
+    summary: "Check a customer's reward token without using it", auth: "staff", permission: "rewards.redeem.verify",
+    params: LocationParams, body: RedemptionTokenRequest, response: RedemptionVerification, successStatus: 200,
+    errors: ["unauthenticated", "forbidden", "redemption_invalid", "redemption_expired", "redemption_already_completed", "redemption_wrong_location"],
+    status: "implemented", owner: "loyalty",
+  }),
+  completeRedemption: defineRoute({
+    id: "completeRedemption", method: "POST", path: "/v1/organizations/{organizationId}/locations/{locationId}/redemptions/complete",
+    summary: "Mark a reward as handed over (exactly once)", auth: "staff", permission: "rewards.redeem.verify",
+    params: LocationParams, body: RedemptionTokenRequest, response: RedemptionVerification, successStatus: 200,
+    errors: ["unauthenticated", "forbidden", "redemption_invalid", "redemption_expired", "redemption_already_completed", "redemption_wrong_location"],
+    status: "implemented", owner: "loyalty",
+  }),
+  requestLocationAdjustment: defineRoute({
+    id: "requestLocationAdjustment", method: "POST", path: "/v1/organizations/{organizationId}/locations/{locationId}/loyalty/adjustments",
+    summary: "Request a points correction for a member (store-level)", description: "Creates a pending request. Balances change only after a different person approves it.",
+    auth: "staff", permission: "loyalty.adjust.request", params: LocationParams, body: AdjustmentRequestInput.omit({ locationId: true }),
+    response: AdjustmentRequestSummary, successStatus: 201, errors: ["unauthenticated", "forbidden", "not_found", "validation_failed", "loyalty_program_unavailable"],
+    status: "implemented", owner: "loyalty",
+  }),
+
+  // ---- Loyalty: organization --------------------------------------------------
+  requestAdjustment: defineRoute({
+    id: "requestAdjustment", method: "POST", path: "/v1/organizations/{organizationId}/loyalty/adjustments",
+    summary: "Request a points correction for a member (organization-level)", description: "Creates a pending request. Balances change only after a different person approves it.",
+    auth: "staff", permission: "loyalty.adjust.request", params: OrgParams, body: AdjustmentRequestInput,
+    response: AdjustmentRequestSummary, successStatus: 201, errors: ["unauthenticated", "forbidden", "not_found", "validation_failed", "loyalty_program_unavailable"],
+    status: "implemented", owner: "loyalty",
+  }),
+  listAdjustments: defineRoute({
+    id: "listAdjustments", method: "GET", path: "/v1/organizations/{organizationId}/loyalty/adjustments", summary: "Adjustment requests, newest first",
+    auth: "staff", permission: "loyalty.adjust.approve", params: OrgParams, query: PageQuery.extend({ status: AdjustmentStatus.optional() }),
+    response: Page(AdjustmentRequestSummary), successStatus: 200, errors: ["unauthenticated", "forbidden"], status: "implemented", owner: "loyalty",
+  }),
+  decideAdjustment: defineRoute({
+    id: "decideAdjustment", method: "POST", path: "/v1/organizations/{organizationId}/loyalty/adjustments/{adjustmentId}/decision",
+    summary: "Approve (apply to the ledger) or reject an adjustment request", description: "The reviewer must be a different person from the requester.",
+    auth: "staff", permission: "loyalty.adjust.approve", params: AdjustmentParams, body: AdjustmentDecisionInput,
+    response: AdjustmentRequestSummary, successStatus: 200, errors: ["unauthenticated", "forbidden", "not_found", "conflict", "insufficient_points"],
+    status: "implemented", owner: "loyalty",
   }),
 } as const;
 

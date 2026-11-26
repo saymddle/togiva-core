@@ -10,6 +10,8 @@ import { connectionCodeRoutes } from "./modules/connection-codes/routes.js";
 import { ConnectionCodeService } from "./modules/connection-codes/service.js";
 import { enroll } from "./modules/identity/enrollment.js";
 import { ensureUserProfile, getMe } from "./modules/identity/service.js";
+import { RedemptionService } from "./modules/loyalty/redemptions.js";
+import { loyaltyRoutes } from "./modules/loyalty/routes.js";
 import { getLocation, getOrganizationBySlug, listLocations } from "./modules/organizations/service.js";
 
 export interface AppDeps {
@@ -99,5 +101,6 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerRoute(app, db, v1.getLocation, ({ ctx, params }) => getLocation(db, ctx, params.organizationId, params.locationId));
 
   connectionCodeRoutes(app, db, new ConnectionCodeService(db, deps.hasher));
+  loyaltyRoutes(app, db, new RedemptionService(deps.hasher.redemptionTokens()));
   return app;
 }

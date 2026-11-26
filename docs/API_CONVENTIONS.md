@@ -41,9 +41,22 @@ Client apps are configured with an organization **slug**, not an id, and resolve
 | `POST /v1/organizations/{organizationId}/locations/{locationId}/connection-codes/lookup` | staff `customer.identify` |
 | `POST .../connection-reservations/{reservationId}/release` | staff `customer.identify` |
 | `POST .../connection-reservations/{reservationId}/associate` | staff `connection.associate` |
+| `GET /v1/me/organizations/{organizationId}/wallet` | customer |
+| `GET /v1/me/organizations/{organizationId}/activity` | customer |
+| `GET /v1/me/organizations/{organizationId}/rewards` | customer |
+| `POST /v1/me/organizations/{organizationId}/redemptions` | customer (idempotent; retry returns 200 with the same token) |
+| `GET /v1/me/organizations/{organizationId}/redemptions` | customer |
+| `GET /v1/me/organizations/{organizationId}/redemptions/{redemptionId}` | customer (re-show an unused token) |
+| `DELETE /v1/me/organizations/{organizationId}/redemptions/{redemptionId}` | customer (points returned) |
+| `POST /v1/organizations/{organizationId}/locations/{locationId}/redemptions/verify` | staff `rewards.redeem.verify` |
+| `POST /v1/organizations/{organizationId}/locations/{locationId}/redemptions/complete` | staff `rewards.redeem.verify` |
+| `POST /v1/organizations/{organizationId}/locations/{locationId}/loyalty/adjustments` | staff `loyalty.adjust.request` (at the location) |
+| `POST /v1/organizations/{organizationId}/loyalty/adjustments` | staff `loyalty.adjust.request` (organization-wide) |
+| `GET /v1/organizations/{organizationId}/loyalty/adjustments` | staff `loyalty.adjust.approve` |
+| `POST /v1/organizations/{organizationId}/loyalty/adjustments/{adjustmentId}/decision` | staff `loyalty.adjust.approve`, not the requester |
 
-## Planned (contract fixed)
+Loyalty error codes: `loyalty_program_unavailable`, `insufficient_points`, `reward_unavailable` (with `details.reasons`), `redemption_invalid`, `redemption_expired`, `redemption_already_completed`, `redemption_wrong_location`. See `LOYALTY_ENGINE.md`.
 
-`GET /v1/me/organizations/{organizationId}/wallet`, `GET .../activity`, `GET .../rewards`, `POST .../redemptions` (owner: loyalty module).
+## Not yet in the contract
 
-Other routes the franchise and corporate apps need (staff management, analytics, campaigns, loyalty admin, POS settings, support cases, redemption verification) must be added to `v1.ts` by the owning module **before** UI work depends on them. See `MODULE_OWNERSHIP.md`.
+Other routes the franchise and corporate apps need (staff management, analytics, campaigns, loyalty program and reward administration, POS settings, support cases) must be added to `v1.ts` by the owning module **before** UI work depends on them. See `MODULE_OWNERSHIP.md`.

@@ -5,7 +5,9 @@ const STATUS: Partial<Record<ApiErrorCode, number>> = {
   rate_limited: 429, membership_required: 403, location_not_participating: 422,
   connection_code_invalid: 404, connection_code_expired: 410, connection_code_already_used: 409, connection_code_locked_out: 429,
   connection_code_reservation_expired: 410, connection_code_not_reserved_by_you: 409, connection_code_space_exhausted: 503,
-  order_already_associated: 409, internal_error: 500,
+  order_already_associated: 409,
+  loyalty_program_unavailable: 409, insufficient_points: 409, reward_unavailable: 409, redemption_invalid: 404, redemption_expired: 410,
+  redemption_already_completed: 409, redemption_wrong_location: 409, internal_error: 500,
 };
 
 export class AppError extends Error {

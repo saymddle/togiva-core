@@ -15,7 +15,12 @@ while (running) {
   if (Date.now() - lastSweep > 60_000) {
     lastSweep = Date.now();
     const minute = Math.floor(Date.now() / 60_000);
-    await db.asService({ userId: null }, (tx) => tx.query("select togiva.enqueue_job('connection_codes.sweep', '{}'::jsonb, null, $1)", [`sweep:${minute}`]));
+    const hour = Math.floor(minute / 60);
+    await db.asService({ userId: null }, async (tx) => {
+      await tx.query("select togiva.enqueue_job('connection_codes.sweep', '{}'::jsonb, null, $1)", [`sweep:${minute}`]);
+      await tx.query("select togiva.enqueue_job('loyalty.redemptions.sweep', '{}'::jsonb, null, $1)", [`sweep:${minute}`]);
+      await tx.query("select togiva.enqueue_job('loyalty.reconcile', '{}'::jsonb, null, $1)", [`reconcile:${hour}`]);
+    });
   }
   const n = await worker.runOnce().catch((err) => { console.error("worker batch failed", err); return 0; });
   if (n === 0) await new Promise((r) => setTimeout(r, 1000));

@@ -40,4 +40,28 @@ insert into togiva.pos_connections (id, organization_id, provider_code, environm
   ('00000000-0000-4000-8000-0000000000f1', '00000000-0000-4000-8000-000000000001', 'fixture', 'fixture', 'fixture-merchant-1', 'Fixture POS', 'active')
 on conflict (id) do nothing;
 
+-- Synthetic loyalty program so the apps' wallet, activity and rewards screens
+-- have something to show locally. These rates, tiers and rewards are
+-- placeholders for development, not a proposal for any brand's program.
+insert into togiva.loyalty_programs (id, organization_id, name, status, currency) values
+  ('00000000-0000-4000-8000-0000000000b1', '00000000-0000-4000-8000-000000000001', 'Fixture Program (development)', 'active', 'USD')
+on conflict (id) do nothing;
+insert into togiva.loyalty_program_versions (id, organization_id, loyalty_program_id, version, status, config, effective_from, published_at) values
+  ('00000000-0000-4000-8000-0000000000b2', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b1', 1, 'published',
+   '{"eligibleAmount": {"include": ["subtotal", "discount"], "excludeProductRefs": [], "excludeCategories": []}, "rounding": "floor",
+     "pointsExpireAfterMonths": null, "qualification": {"metric": "qualifying_spend", "period": "calendar_year"},
+     "pendingPeriodSeconds": 0, "earningLocations": "all_participating"}', '2020-01-01', now())
+on conflict (id) do nothing;
+insert into togiva.loyalty_tiers (id, organization_id, program_version_id, rank, name, qualification_threshold, earning_multiplier) values
+  ('00000000-0000-4000-8000-0000000000b3', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b2', 1, 'Fixture Tier A', 0, 1),
+  ('00000000-0000-4000-8000-0000000000b4', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b2', 2, 'Fixture Tier B', 10000, 1.5)
+on conflict (id) do nothing;
+insert into togiva.loyalty_earning_rules (id, organization_id, program_version_id, rule_type, name, priority, points_per_unit) values
+  ('00000000-0000-4000-8000-0000000000b5', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b2', 'base_rate', 'Fixture base rate', 100, 1)
+on conflict (id) do nothing;
+insert into togiva.rewards (id, organization_id, loyalty_program_id, name, description, category, points_cost, status) values
+  ('00000000-0000-4000-8000-0000000000b6', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b1', 'Fixture Reward Small', 'Development placeholder', 'side', 25, 'active'),
+  ('00000000-0000-4000-8000-0000000000b7', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-0000000000b1', 'Fixture Reward Large', 'Development placeholder', 'food', 100, 'active')
+on conflict (id) do nothing;
+
 commit;

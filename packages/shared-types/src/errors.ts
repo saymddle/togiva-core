@@ -23,6 +23,14 @@ export const ApiErrorCode = z.enum([
   "connection_code_not_reserved_by_you",
   "connection_code_space_exhausted",
   "order_already_associated",
+  // loyalty
+  "loyalty_program_unavailable",
+  "insufficient_points",
+  "reward_unavailable",
+  "redemption_invalid",
+  "redemption_expired",
+  "redemption_already_completed",
+  "redemption_wrong_location",
   "internal_error",
 ]);
 export type ApiErrorCode = z.infer<typeof ApiErrorCode>;
