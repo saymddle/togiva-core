@@ -88,11 +88,14 @@ export async function evaluateTier(tx: Queryable, account: Account, version: Pro
 }
 
 async function memberTerms(tx: Queryable, account: Account, version: ProgramVersion, at: Date): Promise<EarningMember> {
-  const rank = await tierRankOf(tx, account.currentTierId);
+  const storedRank = await tierRankOf(tx, account.currentTierId);
   const tiers = await tiersOf(tx, version.id);
-  const tier = rank === null ? undefined : tiers.find((t) => t.rank === rank);
   const window = qualificationWindow(version.config.qualification.period, at, account.openedAt);
   const prior = await progressBetween(tx, account.id, window.start, window.end);
+  // Same rule as the wallet: the stored tier, or the tier prior progress already reaches (e.g. a threshold-0 tier), whichever is higher.
+  const reached = tierForProgress(tiers, Math.max(0, progressFor(version.config.qualification.metric, prior)));
+  const rank = Math.max(storedRank ?? 0, reached?.rank ?? 0) || null;
+  const tier = rank === null ? undefined : tiers.find((t) => t.rank === rank);
   return { tierRank: rank, tierMultiplier: tier?.earningMultiplier ?? 1, priorVisitsInPeriod: prior.visits };
 }
 

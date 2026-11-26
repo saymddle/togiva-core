@@ -120,7 +120,10 @@ describe("earning", () => {
 
   it("earns from a confirmed purchase through the full connection-code flow, never at association time", async () => {
     const m = await member();
-    expect(await wallet(m.user)).toMatchObject({ availablePoints: 0, pendingPoints: 0, currentTier: null, dataStatus: "current" });
+    const fresh = await wallet(m.user);
+    expect(fresh).toMatchObject({ availablePoints: 0, pendingPoints: 0, dataStatus: "current" });
+    expect(fresh.currentTier?.rank).toBe(1); // threshold-0 tier applies from day one
+    expect(fresh.nextTier?.rank).toBe(2);
 
     const code = (await h.call(m.user, "POST", `/v1/me/organizations/${s.org}/connection-codes`, { locationId: s.l1 })).body.code;
     const res = await h.call(s.cashier, "POST", `/v1/organizations/${s.org}/locations/${s.l1}/connection-codes/lookup`, { code, terminalId: "t1", idempotencyKey: key() });

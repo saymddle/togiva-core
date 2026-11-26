@@ -1,7 +1,7 @@
 import type { Queryable } from "@togiva/database";
 import type { ActivityItem, RewardSummary, Wallet } from "@togiva/shared-types";
 import { AppError } from "../../errors.js";
-import { nextTierAfter, qualificationWindow } from "./engine.js";
+import { nextTierAfter, qualificationWindow, tierForProgress } from "./engine.js";
 import { balanceOf, findAccount, memberOf, progressBetween, progressFor, requireActiveProgram, tierRankOf, tiersOf, versionAt, type Account, type Tier } from "./program.js";
 
 /*
@@ -29,8 +29,12 @@ export async function getWallet(tx: Queryable, userId: string, organizationId: s
 
   const window = qualificationWindow(version.config.qualification.period, now, account?.openedAt ?? now);
   const progress = account ? progressFor(version.config.qualification.metric, await progressBetween(tx, account.id, window.start, window.end)) : 0;
+  // Stored tier (never lowered automatically) or the tier the progress already
+  // reaches, whichever is higher. A new member is in any tier with threshold 0.
   const rank = account ? await tierRankOf(tx, account.currentTierId) : null;
-  const current = rank === null ? null : tiers.find((t) => t.rank === rank) ?? null;
+  const stored = rank === null ? null : tiers.find((t) => t.rank === rank) ?? null;
+  const reached = tierForProgress(tiers, Math.max(0, progress));
+  const current = stored && (!reached || stored.rank >= reached.rank) ? stored : reached;
   const next = nextTierAfter(tiers, current);
 
   const available = Math.max(0, balance.available);
