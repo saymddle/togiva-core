@@ -1,5 +1,5 @@
 import type { Database } from "@togiva/database";
-import type { LocationSummary } from "@togiva/shared-types";
+import type { LocationSummary, OrganizationSummary } from "@togiva/shared-types";
 import { AppError } from "../../errors.js";
 
 const locationSql = `select l.id, l.organization_id as "organizationId", l.store_code as "storeCode", l.name, l.status,
@@ -26,6 +26,24 @@ export async function getLocation(db: Database, ctx: { userId: string | null; re
   return db.asUser(ctx, async (tx) => {
     const r = await tx.query<LocationSummary>(`${locationSql} where l.organization_id = $1 and l.id = $2`, [organizationId, locationId]);
     if (!r.rows[0]) throw new AppError("not_found", "Location not found");
+    return r.rows[0];
+  });
+}
+
+/**
+ * Public lookup used by client applications to turn their configured
+ * organization slug into an id before sign-in. Only active organizations are
+ * resolvable, and only the public summary fields are returned. Runs as the
+ * service role because anonymous callers have no RLS grant on organizations.
+ */
+export async function getOrganizationBySlug(db: Database, ctx: { userId: string | null; requestId: string }, slug: string) {
+  return db.asService(ctx, async (tx) => {
+    const r = await tx.query<OrganizationSummary>(
+      `select id, slug, name, status, default_currency as "defaultCurrency", default_timezone as "defaultTimezone"
+       from togiva.organizations where slug = $1 and status = 'active'`,
+      [slug],
+    );
+    if (!r.rows[0]) throw new AppError("not_found", "Organization not found");
     return r.rows[0];
   });
 }

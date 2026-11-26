@@ -16,6 +16,8 @@ const Env = z.object({
    */
   CONNECTION_CODE_HMAC_KEYS: z.string().min(1),
   CONNECTION_CODE_ACTIVE_KEY_VERSION: z.coerce.number().int().positive().default(1),
+  /** Comma-separated browser origins allowed by CORS (the client web apps). */
+  CORS_ALLOWED_ORIGINS: z.string().default(""),
   TRUST_PROXY: z.coerce.boolean().default(false),
   LOG_LEVEL: z.string().default("info"),
 });
@@ -29,6 +31,7 @@ export interface AppConfig {
   auth: { jwtSecret?: string; jwksUrl?: string; issuer?: string; audience: string };
   connectionCodes: { keys: Map<number, Buffer>; activeKeyVersion: number };
   trustProxy: boolean;
+  corsAllowedOrigins: string[];
   logLevel: string;
 }
 
@@ -58,6 +61,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): AppConfig {
     auth: { jwtSecret: env.AUTH_JWT_SECRET, jwksUrl: env.AUTH_JWKS_URL, issuer: env.AUTH_ISSUER, audience: env.AUTH_AUDIENCE },
     connectionCodes: { keys, activeKeyVersion: env.CONNECTION_CODE_ACTIVE_KEY_VERSION },
     trustProxy: env.TRUST_PROXY,
+    corsAllowedOrigins: env.CORS_ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean),
     logLevel: env.LOG_LEVEL,
   };
 }

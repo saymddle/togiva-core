@@ -13,6 +13,7 @@ const app = buildApp({
   version: process.env.APP_VERSION,
   logger: { level: config.logLevel, redact: ["req.headers.authorization"] },
   trustProxy: config.trustProxy,
+  corsAllowedOrigins: config.corsAllowedOrigins,
 });
 await app.listen({ port: config.port, host: "0.0.0.0" });
 

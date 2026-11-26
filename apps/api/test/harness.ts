@@ -10,10 +10,10 @@ import { JobWorker } from "../src/modules/jobs/queue.js";
 
 const JWT_SECRET = randomBytes(32).toString("hex");
 
-export async function createHarness() {
+export async function createHarness(opts: { corsAllowedOrigins?: string[] } = {}) {
   const t = await createTestDatabase();
   const hasher = new ConnectionCodeHasher(new Map([[1, randomBytes(32)]]), 1);
-  const app = buildApp({ db: t.db, verifier: new JwtIdentityVerifier({ jwtSecret: JWT_SECRET, audience: "authenticated" }), hasher });
+  const app = buildApp({ db: t.db, verifier: new JwtIdentityVerifier({ jwtSecret: JWT_SECRET, audience: "authenticated" }), hasher, corsAllowedOrigins: opts.corsAllowedOrigins });
   await app.ready();
   const fixtures = new Fixtures(t.admin);
 

@@ -19,11 +19,18 @@ The contract of record is `packages/api-contracts/src/v1.ts`; `packages/api-cont
 - The server never trusts client-supplied amounts, balances, prices or permissions.
 - Every response is validated against its contract in non-production environments.
 
+## Browser clients (CORS)
+
+Client web apps call the API from their own origins. `CORS_ALLOWED_ORIGINS` (comma-separated, exact match) lists them; other origins get no CORS headers. Credentials mode is never enabled because auth is a bearer token, not a cookie. Allowed request headers: `authorization`, `content-type`; exposed response header: `retry-after`.
+
+Client apps are configured with an organization **slug**, not an id, and resolve it with `GET /v1/organizations/by-slug/{slug}` before sign-in.
+
 ## Implemented routes
 
 | Route | Auth |
 | --- | --- |
 | `GET /v1/health` | public |
+| `GET /v1/organizations/by-slug/{slug}` | public (active organizations only; public summary fields) |
 | `GET /v1/me` | user |
 | `POST /v1/me/organizations/{organizationId}/enrollment` | user |
 | `GET /v1/organizations/{organizationId}/locations` | user |

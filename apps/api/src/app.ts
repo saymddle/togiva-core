@@ -10,7 +10,7 @@ import { connectionCodeRoutes } from "./modules/connection-codes/routes.js";
 import { ConnectionCodeService } from "./modules/connection-codes/service.js";
 import { enroll } from "./modules/identity/enrollment.js";
 import { ensureUserProfile, getMe } from "./modules/identity/service.js";
-import { getLocation, listLocations } from "./modules/organizations/service.js";
+import { getLocation, getOrganizationBySlug, listLocations } from "./modules/organizations/service.js";
 
 export interface AppDeps {
   db: Database;
@@ -19,6 +19,8 @@ export interface AppDeps {
   version?: string;
   logger?: boolean | object;
   trustProxy?: boolean;
+  /** Browser origins allowed to call the API (exact match, e.g. https://app.example.com). */
+  corsAllowedOrigins?: string[];
 }
 
 export function buildApp(deps: AppDeps): FastifyInstance {
@@ -30,6 +32,24 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     // (Fastify's default serializers do not log bodies or headers.)
   });
   const { db } = deps;
+
+  // CORS for the client web applications. Exact-origin allow list; no
+  // credentials mode (auth is a bearer token, never a cookie).
+  const allowedOrigins = new Set(deps.corsAllowedOrigins ?? []);
+  app.addHook("onRequest", async (req, reply) => {
+    const origin = req.headers.origin;
+    if (!origin || !allowedOrigins.has(origin)) return;
+    reply.header("access-control-allow-origin", origin);
+    reply.header("vary", "Origin");
+    reply.header("access-control-expose-headers", "retry-after");
+    if (req.method === "OPTIONS") {
+      reply.header("access-control-allow-methods", "GET,POST,PUT,PATCH,DELETE");
+      reply.header("access-control-allow-headers", "authorization,content-type");
+      reply.header("access-control-max-age", "600");
+      return reply.status(204).send();
+    }
+  });
+  app.options("*", async (_req, reply) => reply.status(204).send());
 
   app.decorateRequest("identity", null);
   app.addHook("onRequest", async (req) => {
@@ -74,6 +94,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return membership;
   });
 
+  registerRoute(app, db, v1.getOrganizationBySlug, ({ ctx, params }) => getOrganizationBySlug(db, ctx, params.slug));
   registerRoute(app, db, v1.listLocations, ({ ctx, params, query }) => listLocations(db, ctx, params.organizationId, query));
   registerRoute(app, db, v1.getLocation, ({ ctx, params }) => getLocation(db, ctx, params.organizationId, params.locationId));
 

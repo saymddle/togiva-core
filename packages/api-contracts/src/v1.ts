@@ -12,6 +12,7 @@ import {
   LocationSummary,
   LookupConnectionCodeRequest,
   Me,
+  OrganizationSummary,
   Page,
   PageQuery,
   RewardSummary,
@@ -21,6 +22,7 @@ import {
 import { defineRoute } from "./route.js";
 
 const OrgParams = z.object({ organizationId: z.uuid() });
+const SlugParams = z.object({ slug: z.string().regex(/^[a-z0-9][a-z0-9-]{1,62}$/) });
 const LocationParams = OrgParams.extend({ locationId: z.uuid() });
 const ReservationParams = LocationParams.extend({ reservationId: z.uuid() });
 
@@ -51,6 +53,12 @@ export const v1 = {
     description: "Creates the global customer profile if needed and an organization-specific membership. Idempotent: calling again returns the existing membership.",
     auth: "user", params: OrgParams, body: EnrollmentRequest, response: CustomerMembership, successStatus: 201,
     errors: ["unauthenticated", "not_found", "validation_failed"], status: "implemented", owner: "customer-identity",
+  }),
+  getOrganizationBySlug: defineRoute({
+    id: "getOrganizationBySlug", method: "GET", path: "/v1/organizations/by-slug/{slug}",
+    summary: "Resolve a client application's configured organization slug to its public summary (active organizations only)",
+    auth: "public", params: SlugParams, response: OrganizationSummary, successStatus: 200,
+    errors: ["not_found"], status: "implemented", owner: "organizations",
   }),
   listLocations: defineRoute({
     id: "listLocations", method: "GET", path: "/v1/organizations/{organizationId}/locations", summary: "Locations visible to the caller",

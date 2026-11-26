@@ -1,6 +1,6 @@
 # Implementation status
 
-Last updated: 2026-11-25 (Phase 0 and Phase 1). Update this file in the same PR that changes a module's state.
+Last updated: 2026-11-26 (Phase 0, Phase 1, and core support for Phase 2). Update this file in the same PR that changes a module's state.
 
 Legend: ✅ implemented and tested · 🟨 schema/contract fixed, implementation pending · ⬜ not started
 
@@ -23,11 +23,17 @@ See `REPOSITORY_ASSESSMENT.md`. Both project repositories were empty. The Mr. Co
 | `GET /v1/me` with effective permissions | ✅ | Drives role-based navigation |
 | Customer enrollment (global identity + org membership) | ✅ | |
 | Locations read API | ✅ | Admin CRUD pending (corporate workstream) |
+| Public organization lookup by slug (for client apps) | ✅ | `GET /v1/organizations/by-slug/{slug}`, active orgs only |
+| CORS allow list for client web apps | ✅ | `CORS_ALLOWED_ORIGINS` |
 | Audit logging (`write_audit`, append-only) | ✅ | Audit read API pending |
 | Durable background jobs + worker | ✅ | Retries, backoff, dead-letter alert, lease expiry |
 | Shared types + API contracts v1 + OpenAPI | ✅ | `1.0.0-alpha.1` |
 | **Connection code service** (issue, lookup, reserve, release, associate, POS reconcile, sweeper) | ✅ | See `CONNECTION_CODES.md` |
 | Dev fixtures (synthetic org, no client data) | ✅ | `pnpm db:seed:dev` |
+
+## Phase 2: Mr. Cow application foundation ✅
+
+Built in `saymddle/mr-cow-applications`: customer PWA, franchise portal and corporate console shells, brand configuration from the Mr. Cow website, shared UI, a typed API client generated from this repository's OpenAPI document, Supabase Auth sign-in and role-based navigation from `/v1/me`. See that repository's `docs/IMPLEMENTATION_STATUS.md`.
 
 ## Later phases (core side)
 
@@ -47,9 +53,9 @@ See `REPOSITORY_ASSESSMENT.md`. Both project repositories were empty. The Mr. Co
 | Data-retention purge jobs, support-access workflow | ⬜ | Security |
 | Deployment (staging/prod), monitoring, backups/PITR, restore tests | ⬜ | DevOps |
 
-## Tests (2026-11-25)
+## Tests (2026-11-26)
 
-`pnpm test` with `TEST_DATABASE_URL` pointing at Postgres 16: **71 passed, 0 failed**.
+`pnpm test` with `TEST_DATABASE_URL` pointing at Postgres 16: **77 passed, 0 failed**.
 
 | Suite | Tests |
 | --- | --- |
@@ -58,6 +64,7 @@ See `REPOSITORY_ASSESSMENT.md`. Both project repositories were empty. The Mr. Co
 | `packages/api-contracts/src/openapi.test.ts` | 3 |
 | `apps/api/test/connection-codes.test.ts` | 29 |
 | `apps/api/test/identity-and-locations.test.ts` | 12 |
+| `apps/api/test/client-access.test.ts` | 6 |
 
 Also verified manually: migrations apply on an empty database and are idempotent on rerun; dev fixtures load; the API process starts, `/v1/health` reports the database, and a real token issued a code (`0871`, leading zero preserved) through HTTP.
 
