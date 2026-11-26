@@ -1,0 +1,17 @@
+{
+  "name": "@togiva/api-contracts",
+  "version": "1.0.0-alpha.1",
+  "description": "Versioned TOGIVA HTTP API contracts (v1) and OpenAPI document",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }, "./openapi/v1.json": "./openapi/v1.json" },
+  "files": ["dist", "openapi"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "openapi": "tsx src/cli/generate-openapi.ts",
+    "test": "vitest run"
+  },
+  "dependencies": { "@togiva/shared-types": "workspace:*", "zod": "^4.1.0" }
+}

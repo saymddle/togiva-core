@@ -1,0 +1,10 @@
+{
+  "name": "@togiva/portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static project portal: implementation status, docs and API reference, rebuilt on every push",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
