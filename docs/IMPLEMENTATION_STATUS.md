@@ -55,7 +55,7 @@ Built in `saymddle/mr-cow-applications`: customer PWA, franchise portal and corp
 
 ## Tests (2026-11-26)
 
-`pnpm test` with `TEST_DATABASE_URL` pointing at Postgres 16: **77 passed, 0 failed**.
+`pnpm test` with `TEST_DATABASE_URL` pointing at Postgres 16: **78 passed, 0 failed**.
 
 | Suite | Tests |
 | --- | --- |
@@ -63,7 +63,7 @@ Built in `saymddle/mr-cow-applications`: customer PWA, franchise portal and corp
 | `packages/shared-types/src/connection-codes.test.ts` | 11 |
 | `packages/api-contracts/src/openapi.test.ts` | 3 |
 | `apps/api/test/connection-codes.test.ts` | 29 |
-| `apps/api/test/identity-and-locations.test.ts` | 12 |
+| `apps/api/test/identity-and-locations.test.ts` | 13 |
 | `apps/api/test/client-access.test.ts` | 6 |
 
 Also verified manually: migrations apply on an empty database and are idempotent on rerun; dev fixtures load; the API process starts, `/v1/health` reports the database, and a real token issued a code (`0871`, leading zero preserved) through HTTP.

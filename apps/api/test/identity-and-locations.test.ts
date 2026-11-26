@@ -130,3 +130,18 @@ describe("health", () => {
     expect(r.body).toEqual({ status: "ok", version: "dev", database: "ok" });
   });
 });
+
+describe("profile email conflicts", () => {
+  it("refuses a second identity that presents an email another profile holds, without a 500", async () => {
+    const first = randomUUID();
+    const second = randomUUID();
+    const email = `dup-${first}@example.test`;
+    const one = await h.app.inject({ method: "GET", url: "/v1/me", headers: { authorization: `Bearer ${await h.token(first, email)}` } });
+    expect(one.statusCode).toBe(200);
+    const two = await h.app.inject({ method: "GET", url: "/v1/me", headers: { authorization: `Bearer ${await h.token(second, email.toUpperCase())}` } });
+    expect(two.statusCode).toBe(409);
+    expect(two.json().error.code).toBe("conflict");
+    const r = await h.admin.query("select count(*)::int as n from togiva.user_profiles where id = $1", [second]);
+    expect(r.rows[0].n).toBe(0);
+  });
+});

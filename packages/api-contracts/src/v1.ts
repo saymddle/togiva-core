@@ -46,7 +46,7 @@ export const v1 = {
   getMe: defineRoute({
     id: "getMe", method: "GET", path: "/v1/me", summary: "Current identity, staff roles, effective permissions and customer memberships",
     description: "Creates the user_profiles row on first call from verified token claims. Client apps use this to build role-based navigation; the server still authorizes every call.",
-    auth: "user", response: Me, successStatus: 200, errors: ["unauthenticated"], status: "implemented", owner: "identity-access",
+    auth: "user", response: Me, successStatus: 200, errors: ["unauthenticated", "conflict"], status: "implemented", owner: "identity-access",
   }),
   enroll: defineRoute({
     id: "enroll", method: "POST", path: "/v1/me/organizations/{organizationId}/enrollment", summary: "Join an organization's membership program",

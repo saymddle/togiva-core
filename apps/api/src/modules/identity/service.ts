@@ -1,6 +1,7 @@
-import type { Database, Queryable } from "@togiva/database";
+import { isPgError, PgErrorCode, type Database, type Queryable } from "@togiva/database";
 import type { CustomerMembership, Me, OrganizationSummary, Permission, StaffMembership } from "@togiva/shared-types";
 import type { Identity } from "../../auth/verifier.js";
+import { AppError } from "../../errors.js";
 
 /**
  * Creates or refreshes the user_profiles row from verified token claims.
@@ -9,6 +10,19 @@ import type { Identity } from "../../auth/verifier.js";
  * the token is trusted for authorization.
  */
 export async function ensureUserProfile(db: Database, identity: Identity, requestId: string): Promise<void> {
+  try {
+    await upsertProfile(db, identity, requestId);
+  } catch (e) {
+    // Emails are unique across profiles. A second identity-provider account
+    // presenting an email another profile already holds (for example a
+    // deleted and re-created sign-in) must not take over that profile.
+    if (isPgError(e) && e.code === PgErrorCode.uniqueViolation && e.constraint === "user_profiles_email_key")
+      throw new AppError("conflict", "This email address is already linked to a different account. Contact support to merge them.");
+    throw e;
+  }
+}
+
+async function upsertProfile(db: Database, identity: Identity, requestId: string): Promise<void> {
   await db.asService({ userId: identity.userId, requestId }, (tx) =>
     tx.query(
       `insert into togiva.user_profiles (id, email, email_verified_at)
